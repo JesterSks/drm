@@ -4,8 +4,7 @@ import (
 	"os"
 	"unsafe"
 
-	"github.com/NeowayLabs/drm"
-	"github.com/NeowayLabs/drm/ioctl"
+	"github.com/JesterSks/drm/ioctl"
 )
 
 const (
@@ -188,49 +187,39 @@ type (
 
 var (
 	// DRM_IOWR(0xA0, struct drm_mode_card_res)
-	IOCTLModeResources = ioctl.NewCode(ioctl.Read|ioctl.Write,
-		uint16(unsafe.Sizeof(sysResources{})), drm.IOCTLBase, 0xA0)
+	IOCTLModeResources = ioctl.DRMiowr[sysResources](0xA0)
 
 	// DRM_IOWR(0xA1, struct drm_mode_crtc)
-	IOCTLModeGetCrtc = ioctl.NewCode(ioctl.Read|ioctl.Write,
-		uint16(unsafe.Sizeof(sysCrtc{})), drm.IOCTLBase, 0xA1)
+	IOCTLModeGetCrtc = ioctl.DRMiowr[sysCrtc](0xA1)
 
 	// DRM_IOWR(0xA2, struct drm_mode_crtc)
-	IOCTLModeSetCrtc = ioctl.NewCode(ioctl.Read|ioctl.Write,
-		uint16(unsafe.Sizeof(sysCrtc{})), drm.IOCTLBase, 0xA2)
+	IOCTLModeSetCrtc = ioctl.DRMiowr[sysCrtc](0xA2)
 
 	// DRM_IOWR(0xA6, struct drm_mode_get_encoder)
-	IOCTLModeGetEncoder = ioctl.NewCode(ioctl.Read|ioctl.Write,
-		uint16(unsafe.Sizeof(sysGetEncoder{})), drm.IOCTLBase, 0xA6)
+	IOCTLModeGetEncoder = ioctl.DRMiowr[sysGetEncoder](0xA6)
 
 	// DRM_IOWR(0xA7, struct drm_mode_get_connector)
-	IOCTLModeGetConnector = ioctl.NewCode(ioctl.Read|ioctl.Write,
-		uint16(unsafe.Sizeof(sysGetConnector{})), drm.IOCTLBase, 0xA7)
+	IOCTLModeGetConnector = ioctl.DRMiowr[sysGetConnector](0xA7)
 
 	// DRM_IOWR(0xAE, struct drm_mode_fb_cmd)
-	IOCTLModeAddFB = ioctl.NewCode(ioctl.Read|ioctl.Write,
-		uint16(unsafe.Sizeof(sysFBCmd{})), drm.IOCTLBase, 0xAE)
+	IOCTLModeAddFB = ioctl.DRMiowr[sysFBCmd](0xAE)
 
 	// DRM_IOWR(0xAF, unsigned int)
-	IOCTLModeRmFB = ioctl.NewCode(ioctl.Read|ioctl.Write,
-		uint16(unsafe.Sizeof(uint32(0))), drm.IOCTLBase, 0xAF)
+	IOCTLModeRmFB = ioctl.DRMiowr[uint32](0xAF)
 
 	// DRM_IOWR(0xB2, struct drm_mode_create_dumb)
-	IOCTLModeCreateDumb = ioctl.NewCode(ioctl.Read|ioctl.Write,
-		uint16(unsafe.Sizeof(sysCreateDumb{})), drm.IOCTLBase, 0xB2)
+	IOCTLModeCreateDumb = ioctl.DRMiowr[sysCreateDumb](0xB2)
 
 	// DRM_IOWR(0xB3, struct drm_mode_map_dumb)
-	IOCTLModeMapDumb = ioctl.NewCode(ioctl.Read|ioctl.Write,
-		uint16(unsafe.Sizeof(sysMapDumb{})), drm.IOCTLBase, 0xB3)
+	IOCTLModeMapDumb = ioctl.DRMiowr[sysMapDumb](0xB3)
 
 	// DRM_IOWR(0xB4, struct drm_mode_destroy_dumb)
-	IOCTLModeDestroyDumb = ioctl.NewCode(ioctl.Read|ioctl.Write,
-		uint16(unsafe.Sizeof(sysDestroyDumb{})), drm.IOCTLBase, 0xB4)
+	IOCTLModeDestroyDumb = ioctl.DRMiowr[sysDestroyDumb](0xB4)
 )
 
 func GetResources(file *os.File) (*Resources, error) {
 	mres := &sysResources{}
-	err := ioctl.Do(uintptr(file.Fd()), uintptr(IOCTLModeResources),
+	err := ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeResources),
 		uintptr(unsafe.Pointer(mres)))
 	if err != nil {
 		return nil, err
@@ -257,7 +246,7 @@ func GetResources(file *os.File) (*Resources, error) {
 		mres.connectorIdPtr = uint64(uintptr(unsafe.Pointer(&connectorids[0])))
 	}
 
-	err = ioctl.Do(uintptr(file.Fd()), uintptr(IOCTLModeResources),
+	err = ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeResources),
 		uintptr(unsafe.Pointer(mres)))
 	if err != nil {
 		return nil, err
@@ -277,7 +266,7 @@ func GetResources(file *os.File) (*Resources, error) {
 func GetConnector(file *os.File, connid uint32) (*Connector, error) {
 	conn := &sysGetConnector{}
 	conn.ID = connid
-	err := ioctl.Do(uintptr(file.Fd()), uintptr(IOCTLModeGetConnector),
+	err := ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeGetConnector),
 		uintptr(unsafe.Pointer(conn)))
 	if err != nil {
 		return nil, err
@@ -309,7 +298,7 @@ func GetConnector(file *os.File, connid uint32) (*Connector, error) {
 		conn.encodersPtr = uint64(uintptr(unsafe.Pointer(&encoders[0])))
 	}
 
-	err = ioctl.Do(uintptr(file.Fd()), uintptr(IOCTLModeGetConnector),
+	err = ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeGetConnector),
 		uintptr(unsafe.Pointer(conn)))
 	if err != nil {
 		return nil, err
@@ -345,7 +334,7 @@ func GetEncoder(file *os.File, id uint32) (*Encoder, error) {
 	encoder := &sysGetEncoder{}
 	encoder.id = id
 
-	err := ioctl.Do(uintptr(file.Fd()), uintptr(IOCTLModeGetEncoder),
+	err := ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeGetEncoder),
 		uintptr(unsafe.Pointer(encoder)))
 	if err != nil {
 		return nil, err
@@ -365,7 +354,7 @@ func CreateFB(file *os.File, width, height uint16, bpp uint32) (*FB, error) {
 	fb.width = uint32(width)
 	fb.height = uint32(height)
 	fb.bpp = bpp
-	err := ioctl.Do(uintptr(file.Fd()), uintptr(IOCTLModeCreateDumb),
+	err := ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeCreateDumb),
 		uintptr(unsafe.Pointer(fb)))
 	if err != nil {
 		return nil, err
@@ -389,7 +378,7 @@ func AddFB(file *os.File, width, height uint16,
 	f.bpp = uint32(bpp)
 	f.depth = uint32(depth)
 	f.handle = boHandle
-	err := ioctl.Do(uintptr(file.Fd()), uintptr(IOCTLModeAddFB),
+	err := ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeAddFB),
 		uintptr(unsafe.Pointer(f)))
 	if err != nil {
 		return 0, err
@@ -398,14 +387,14 @@ func AddFB(file *os.File, width, height uint16,
 }
 
 func RmFB(file *os.File, bufferid uint32) error {
-	return ioctl.Do(uintptr(file.Fd()), uintptr(IOCTLModeRmFB),
+	return ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeRmFB),
 		uintptr(unsafe.Pointer(&sysRmFB{bufferid})))
 }
 
 func MapDumb(file *os.File, boHandle uint32) (uint64, error) {
 	mreq := &sysMapDumb{}
 	mreq.handle = boHandle
-	err := ioctl.Do(uintptr(file.Fd()), uintptr(IOCTLModeMapDumb),
+	err := ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeMapDumb),
 		uintptr(unsafe.Pointer(mreq)))
 	if err != nil {
 		return 0, err
@@ -414,14 +403,14 @@ func MapDumb(file *os.File, boHandle uint32) (uint64, error) {
 }
 
 func DestroyDumb(file *os.File, handle uint32) error {
-	return ioctl.Do(uintptr(file.Fd()), uintptr(IOCTLModeDestroyDumb),
+	return ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeDestroyDumb),
 		uintptr(unsafe.Pointer(&sysDestroyDumb{handle})))
 }
 
 func GetCrtc(file *os.File, id uint32) (*Crtc, error) {
 	crtc := &sysCrtc{}
 	crtc.id = id
-	err := ioctl.Do(uintptr(file.Fd()), uintptr(IOCTLModeGetCrtc),
+	err := ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeGetCrtc),
 		uintptr(unsafe.Pointer(crtc)))
 	if err != nil {
 		return nil, err
@@ -455,6 +444,6 @@ func SetCrtc(file *os.File, crtcid, bufferid, x, y uint32, connectors *uint32, c
 		crtc.mode = *mode
 		crtc.modeValid = 1
 	}
-	return ioctl.Do(uintptr(file.Fd()), uintptr(IOCTLModeSetCrtc),
+	return ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeSetCrtc),
 		uintptr(unsafe.Pointer(crtc)))
 }

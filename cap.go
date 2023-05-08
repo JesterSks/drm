@@ -4,7 +4,7 @@ import (
 	"os"
 	"unsafe"
 
-	"github.com/NeowayLabs/drm/ioctl"
+	"github.com/JesterSks/drm/ioctl"
 )
 
 type (
@@ -39,7 +39,7 @@ func HasDumbBuffer(file *os.File) bool {
 func GetCap(file *os.File, capid uint64) (uint64, error) {
 	cap := &capability{}
 	cap.id = capid
-	err := ioctl.Do(uintptr(file.Fd()), uintptr(IOCTLGetCap), uintptr(unsafe.Pointer(cap)))
+	err := ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLGetCap), uintptr(unsafe.Pointer(cap)))
 	if err != nil {
 		return 0, err
 	}

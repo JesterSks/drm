@@ -9,7 +9,7 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/NeowayLabs/drm/ioctl"
+	"github.com/JesterSks/drm/ioctl"
 )
 
 type (
@@ -73,7 +73,7 @@ func GetVersion(file *os.File) (Version, error) {
 	)
 
 	version := &version{}
-	err := ioctl.Do(uintptr(file.Fd()), uintptr(IOCTLVersion),
+	err := ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLVersion),
 		uintptr(unsafe.Pointer(version)))
 	if err != nil {
 		return Version{}, err
@@ -93,7 +93,7 @@ func GetVersion(file *os.File) (Version, error) {
 		version.desc = uintptr(unsafe.Pointer(&desc[0]))
 	}
 
-	err = ioctl.Do(uintptr(file.Fd()), uintptr(IOCTLVersion),
+	err = ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLVersion),
 		uintptr(unsafe.Pointer(version)))
 	if err != nil {
 		return Version{}, err

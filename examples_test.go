@@ -3,7 +3,7 @@ package drm_test
 import (
 	"fmt"
 
-	"github.com/NeowayLabs/drm"
+	"github.com/JesterSks/drm"
 )
 
 func ExampleHasDumbBuffer() {

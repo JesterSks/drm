@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/NeowayLabs/drm"
+	"github.com/JesterSks/drm"
 )
 
 type (

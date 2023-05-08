@@ -3,8 +3,8 @@ package drm_test
 import (
 	"testing"
 
-	"github.com/NeowayLabs/drm"
-	"github.com/NeowayLabs/drm/mode"
+	"github.com/JesterSks/drm"
+	"github.com/JesterSks/drm/mode"
 )
 
 func TestDRIOpen(t *testing.T) {

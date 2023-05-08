@@ -1,8 +1,8 @@
 package ioctl
 
 import (
-	"fmt"
 	"syscall"
+	"unsafe"
 )
 
 // To decode a hex IOCTL code:
@@ -30,37 +30,43 @@ import (
 // #define VFAT_IOCTL_READDIR_BOTH         _IOR('r', 1, struct dirent [2])
 // source: https://www.kernel.org/doc/Documentation/ioctl/ioctl-decoding.txt
 
-type Code struct {
-	typ  uint8  // type of ioctl call (read, write, both or none)
-	sz   uint16 // size of arguments (only 13bits usable)
-	uniq uint8  // unique ascii character for this device
-	fn   uint8  // function code
-}
+type iocDirection uint8
 
 const (
-	None  = uint8(0x0)
-	Write = uint8(0x1)
-	Read  = uint8(0x2)
+	drmBase = 'd'
+
+	fnBits        = 8
+	typeBits      = 8
+	sizeBits      = 14
+	directionBits = 2
+
+	fnShift        = 0
+	typeShift      = fnShift + fnBits
+	sizeShift      = typeShift + typeBits
+	directionShift = sizeShift + sizeBits
+
+	iocNone  iocDirection = 0x0
+	iocWrite iocDirection = 0x1
+	iocRead  iocDirection = 0x2
 )
 
-func NewCode(typ uint8, sz uint16, uniq, fn uint8) uint32 {
-	var code uint32
-	if typ > Write|Read {
-		panic(fmt.Errorf("invalid ioctl code value: %d\n", typ))
-	}
-
-	if sz > 2<<14 {
-		panic(fmt.Errorf("invalid ioctl size value: %d\n", sz))
-	}
-
-	code = code | (uint32(typ) << 30)
-	code = code | (uint32(sz) << 16) // sz has 14bits
-	code = code | (uint32(uniq) << 8)
-	code = code | uint32(fn)
-	return code
+func DRMiowr[T any](fn uint8) uint32 {
+	return ioIOWR[T](drmBase, fn)
 }
 
-func Do(fd, cmd, ptr uintptr) error {
+func ioIOWR[T any](iocType, fn uint8) uint32 {
+	var t T
+	return iocCode(iocRead|iocWrite, iocType, fn, uint16(unsafe.Sizeof(t)))
+}
+
+func iocCode(direction iocDirection, iocType, fn uint8, size uint16) uint32 {
+	return uint32(direction)<<directionShift |
+		uint32(size)<<sizeShift |
+		uint32(iocType)<<typeShift |
+		uint32(fn)<<fnShift
+}
+
+func IOCtl(fd, cmd, ptr uintptr) error {
 	_, _, errcode := syscall.Syscall(syscall.SYS_IOCTL, fd, cmd, ptr)
 	if errcode != 0 {
 		return errcode
