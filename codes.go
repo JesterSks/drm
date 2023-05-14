@@ -1,7 +1,7 @@
 package drm
 
 import (
-	"github.com/JesterSks/drm/ioctl"
+	"github.com/JesterSks/drm/internal/ioctl"
 )
 
 var (

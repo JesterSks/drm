@@ -4,7 +4,7 @@ import (
 	"os"
 	"unsafe"
 
-	"github.com/JesterSks/drm/ioctl"
+	"github.com/JesterSks/drm/internal/mode"
 )
 
 const (
@@ -19,49 +19,6 @@ const (
 )
 
 type (
-	sysResources struct {
-		fbIdPtr              uint64
-		crtcIdPtr            uint64
-		connectorIdPtr       uint64
-		encoderIdPtr         uint64
-		CountFbs             uint32
-		CountCrtcs           uint32
-		CountConnectors      uint32
-		CountEncoders        uint32
-		MinWidth, MaxWidth   uint32
-		MinHeight, MaxHeight uint32
-	}
-
-	sysGetConnector struct {
-		encodersPtr   uint64
-		modesPtr      uint64
-		propsPtr      uint64
-		propValuesPtr uint64
-
-		countModes    uint32
-		countProps    uint32
-		countEncoders uint32
-
-		encoderID       uint32 // current encoder
-		ID              uint32
-		connectorType   uint32
-		connectorTypeID uint32
-
-		connection        uint32
-		mmWidth, mmHeight uint32 // HxW in millimeters
-		subpixel          uint32
-	}
-
-	sysGetEncoder struct {
-		id  uint32
-		typ uint32
-
-		crtcID uint32
-
-		possibleCrtcs  uint32
-		possibleClones uint32
-	}
-
 	Info struct {
 		Clock                                         uint32
 		Hdisplay, HsyncStart, HsyncEnd, Htotal, Hskew uint16
@@ -75,7 +32,7 @@ type (
 	}
 
 	Resources struct {
-		sysResources
+		mode.SysResources
 
 		Fbs        []uint32
 		Crtcs      []uint32
@@ -84,7 +41,7 @@ type (
 	}
 
 	Connector struct {
-		sysGetConnector
+		mode.SysGetConnector
 
 		ID            uint32
 		EncoderID     uint32
@@ -112,59 +69,6 @@ type (
 		PossibleClones uint32
 	}
 
-	sysCreateDumb struct {
-		height, width uint32
-		bpp           uint32
-		flags         uint32
-
-		// returned values
-		handle uint32
-		pitch  uint32
-		size   uint64
-	}
-
-	sysMapDumb struct {
-		handle uint32 // Handle for the object being mapped
-		pad    uint32
-
-		// Fake offset to use for subsequent mmap call
-		// This is a fixed-size type for 32/64 compatibility.
-		offset uint64
-	}
-
-	sysFBCmd struct {
-		fbID          uint32
-		width, height uint32
-		pitch         uint32
-		bpp           uint32
-		depth         uint32
-
-		/* driver specific handle */
-		handle uint32
-	}
-
-	sysRmFB struct {
-		handle uint32
-	}
-
-	sysCrtc struct {
-		setConnectorsPtr uint64
-		countConnectors  uint32
-
-		id   uint32
-		fbID uint32 // Id of framebuffer
-
-		x, y uint32 // Position on the frameuffer
-
-		gammaSize uint32
-		modeValid uint32
-		mode      Info
-	}
-
-	sysDestroyDumb struct {
-		handle uint32
-	}
-
 	Crtc struct {
 		ID       uint32
 		BufferID uint32 // FB id to connect to 0 = disconnect
@@ -185,43 +89,10 @@ type (
 	}
 )
 
-var (
-	// DRM_IOWR(0xA0, struct drm_mode_card_res)
-	IOCTLModeResources = ioctl.DRMiowr[sysResources](0xA0)
+func GetResources(f *os.File) (*Resources, error) {
+	mres := mode.SysResources{}
 
-	// DRM_IOWR(0xA1, struct drm_mode_crtc)
-	IOCTLModeGetCrtc = ioctl.DRMiowr[sysCrtc](0xA1)
-
-	// DRM_IOWR(0xA2, struct drm_mode_crtc)
-	IOCTLModeSetCrtc = ioctl.DRMiowr[sysCrtc](0xA2)
-
-	// DRM_IOWR(0xA6, struct drm_mode_get_encoder)
-	IOCTLModeGetEncoder = ioctl.DRMiowr[sysGetEncoder](0xA6)
-
-	// DRM_IOWR(0xA7, struct drm_mode_get_connector)
-	IOCTLModeGetConnector = ioctl.DRMiowr[sysGetConnector](0xA7)
-
-	// DRM_IOWR(0xAE, struct drm_mode_fb_cmd)
-	IOCTLModeAddFB = ioctl.DRMiowr[sysFBCmd](0xAE)
-
-	// DRM_IOWR(0xAF, unsigned int)
-	IOCTLModeRmFB = ioctl.DRMiowr[uint32](0xAF)
-
-	// DRM_IOWR(0xB2, struct drm_mode_create_dumb)
-	IOCTLModeCreateDumb = ioctl.DRMiowr[sysCreateDumb](0xB2)
-
-	// DRM_IOWR(0xB3, struct drm_mode_map_dumb)
-	IOCTLModeMapDumb = ioctl.DRMiowr[sysMapDumb](0xB3)
-
-	// DRM_IOWR(0xB4, struct drm_mode_destroy_dumb)
-	IOCTLModeDestroyDumb = ioctl.DRMiowr[sysDestroyDumb](0xB4)
-)
-
-func GetResources(file *os.File) (*Resources, error) {
-	mres := &sysResources{}
-	err := ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeResources),
-		uintptr(unsafe.Pointer(mres)))
-	if err != nil {
+	if err := mode.GetResources(f, &mres); err != nil {
 		return nil, err
 	}
 
@@ -229,33 +100,31 @@ func GetResources(file *os.File) (*Resources, error) {
 		fbids, crtcids, connectorids, encoderids []uint32
 	)
 
-	if mres.CountFbs > 0 {
-		fbids = make([]uint32, mres.CountFbs)
-		mres.fbIdPtr = uint64(uintptr(unsafe.Pointer(&fbids[0])))
+	if mres.CountFBs > 0 {
+		fbids = make([]uint32, mres.CountFBs)
+		mres.FBIDPtr = uint64(uintptr(unsafe.Pointer(&fbids[0])))
 	}
 	if mres.CountCrtcs > 0 {
 		crtcids = make([]uint32, mres.CountCrtcs)
-		mres.crtcIdPtr = uint64(uintptr(unsafe.Pointer(&crtcids[0])))
+		mres.CrtcIDPtr = uint64(uintptr(unsafe.Pointer(&crtcids[0])))
 	}
 	if mres.CountEncoders > 0 {
 		encoderids = make([]uint32, mres.CountEncoders)
-		mres.encoderIdPtr = uint64(uintptr(unsafe.Pointer(&encoderids[0])))
+		mres.EncoderIDPtr = uint64(uintptr(unsafe.Pointer(&encoderids[0])))
 	}
 	if mres.CountConnectors > 0 {
 		connectorids = make([]uint32, mres.CountConnectors)
-		mres.connectorIdPtr = uint64(uintptr(unsafe.Pointer(&connectorids[0])))
+		mres.ConnectorIDPtr = uint64(uintptr(unsafe.Pointer(&connectorids[0])))
 	}
 
-	err = ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeResources),
-		uintptr(unsafe.Pointer(mres)))
-	if err != nil {
+	if err := mode.GetResources(f, &mres); err != nil {
 		return nil, err
 	}
 
 	// TODO(i4k): handle hotplugging in-between the ioctls above
 
 	return &Resources{
-		sysResources: *mres,
+		SysResources: mres,
 		Fbs:          fbids,
 		Crtcs:        crtcids,
 		Encoders:     encoderids,
@@ -263,12 +132,10 @@ func GetResources(file *os.File) (*Resources, error) {
 	}, nil
 }
 
-func GetConnector(file *os.File, connid uint32) (*Connector, error) {
-	conn := &sysGetConnector{}
-	conn.ID = connid
-	err := ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeGetConnector),
-		uintptr(unsafe.Pointer(conn)))
-	if err != nil {
+func GetConnector(f *os.File, id uint32) (*Connector, error) {
+	conn := mode.SysGetConnector{ID: id}
+
+	if err := mode.GetConnector(f, &conn); err != nil {
 		return nil, err
 	}
 
@@ -278,44 +145,42 @@ func GetConnector(file *os.File, connid uint32) (*Connector, error) {
 		modes           []Info
 	)
 
-	if conn.countProps > 0 {
-		props = make([]uint32, conn.countProps)
-		conn.propsPtr = uint64(uintptr(unsafe.Pointer(&props[0])))
+	if conn.CountProps > 0 {
+		props = make([]uint32, conn.CountProps)
+		conn.PropsPtr = uint64(uintptr(unsafe.Pointer(&props[0])))
 
-		propValues = make([]uint64, conn.countProps)
-		conn.propValuesPtr = uint64(uintptr(unsafe.Pointer(&propValues[0])))
+		propValues = make([]uint64, conn.CountProps)
+		conn.PropValuesPtr = uint64(uintptr(unsafe.Pointer(&propValues[0])))
 	}
 
-	if conn.countModes == 0 {
-		conn.countModes = 1
+	if conn.CountModes == 0 {
+		conn.CountModes = 1
 	}
 
-	modes = make([]Info, conn.countModes)
-	conn.modesPtr = uint64(uintptr(unsafe.Pointer(&modes[0])))
+	modes = make([]Info, conn.CountModes)
+	conn.ModesPtr = uint64(uintptr(unsafe.Pointer(&modes[0])))
 
-	if conn.countEncoders > 0 {
-		encoders = make([]uint32, conn.countEncoders)
-		conn.encodersPtr = uint64(uintptr(unsafe.Pointer(&encoders[0])))
+	if conn.CountEncoders > 0 {
+		encoders = make([]uint32, conn.CountEncoders)
+		conn.EncodersPtr = uint64(uintptr(unsafe.Pointer(&encoders[0])))
 	}
 
-	err = ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeGetConnector),
-		uintptr(unsafe.Pointer(conn)))
-	if err != nil {
+	if err := mode.GetConnector(f, &conn); err != nil {
 		return nil, err
 	}
 
 	ret := &Connector{
-		sysGetConnector: *conn,
+		SysGetConnector: conn,
 		ID:              conn.ID,
-		EncoderID:       conn.encoderID,
-		Connection:      uint8(conn.connection),
-		Width:           conn.mmWidth,
-		Height:          conn.mmHeight,
+		EncoderID:       conn.EncoderID,
+		Connection:      uint8(conn.Connection),
+		Width:           conn.MMWidth,
+		Height:          conn.MMHeight,
 
 		// convert subpixel from kernel to userspace */
-		Subpixel: uint8(conn.subpixel + 1),
-		Type:     conn.connectorType,
-		TypeID:   conn.connectorTypeID,
+		Subpixel: uint8(conn.Subpixel + 1),
+		Type:     conn.ConnectorType,
+		TypeID:   conn.ConnectorTypeID,
 	}
 
 	ret.Props = make([]uint32, len(props))
@@ -330,120 +195,118 @@ func GetConnector(file *os.File, connid uint32) (*Connector, error) {
 	return ret, nil
 }
 
-func GetEncoder(file *os.File, id uint32) (*Encoder, error) {
-	encoder := &sysGetEncoder{}
-	encoder.id = id
+func GetEncoder(f *os.File, id uint32) (*Encoder, error) {
+	encoder := mode.SysGetEncoder{ID: id}
 
-	err := ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeGetEncoder),
-		uintptr(unsafe.Pointer(encoder)))
-	if err != nil {
+	if err := mode.GetEncoder(f, &encoder); err != nil {
 		return nil, err
 	}
 
 	return &Encoder{
-		ID:             encoder.id,
-		CrtcID:         encoder.crtcID,
-		Type:           encoder.typ,
-		PossibleCrtcs:  encoder.possibleCrtcs,
-		PossibleClones: encoder.possibleClones,
+		ID:             encoder.ID,
+		CrtcID:         encoder.CrtcID,
+		Type:           encoder.Type,
+		PossibleCrtcs:  encoder.PossibleCrtcs,
+		PossibleClones: encoder.PossibleClones,
 	}, nil
 }
 
-func CreateFB(file *os.File, width, height uint16, bpp uint32) (*FB, error) {
-	fb := &sysCreateDumb{}
-	fb.width = uint32(width)
-	fb.height = uint32(height)
-	fb.bpp = bpp
-	err := ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeCreateDumb),
-		uintptr(unsafe.Pointer(fb)))
-	if err != nil {
+func CreateFB(f *os.File, width, height uint16, bpp uint32) (*FB, error) {
+	fb := mode.SysCreateDumb{
+		Width:  uint32(width),
+		Height: uint32(height),
+		BPP:    bpp,
+	}
+
+	if err := mode.CreateFB(f, &fb); err != nil {
 		return nil, err
 	}
+
 	return &FB{
-		Height: fb.height,
-		Width:  fb.width,
-		BPP:    fb.bpp,
-		Handle: fb.handle,
-		Pitch:  fb.pitch,
-		Size:   fb.size,
+		Height: fb.Height,
+		Width:  fb.Width,
+		BPP:    fb.BPP,
+		Handle: fb.Handle,
+		Pitch:  fb.Pitch,
+		Size:   fb.Size,
 	}, nil
 }
 
-func AddFB(file *os.File, width, height uint16,
+func AddFB(f *os.File, width, height uint16,
 	depth, bpp uint8, pitch, boHandle uint32) (uint32, error) {
-	f := &sysFBCmd{}
-	f.width = uint32(width)
-	f.height = uint32(height)
-	f.pitch = pitch
-	f.bpp = uint32(bpp)
-	f.depth = uint32(depth)
-	f.handle = boHandle
-	err := ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeAddFB),
-		uintptr(unsafe.Pointer(f)))
-	if err != nil {
+	fb := mode.SysFBCmd{
+		Width:  uint32(width),
+		Height: uint32(height),
+		Pitch:  pitch,
+		BPP:    uint32(bpp),
+		Depth:  uint32(depth),
+		Handle: boHandle,
+	}
+
+	if err := mode.AddFB(f, &fb); err != nil {
 		return 0, err
 	}
-	return f.fbID, nil
+
+	return fb.FBID, nil
 }
 
-func RmFB(file *os.File, bufferid uint32) error {
-	return ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeRmFB),
-		uintptr(unsafe.Pointer(&sysRmFB{bufferid})))
+func RmFB(f *os.File, handle uint32) error {
+	return mode.RmFB(f, &mode.SysRmFB{Handle: handle})
 }
 
-func MapDumb(file *os.File, boHandle uint32) (uint64, error) {
-	mreq := &sysMapDumb{}
-	mreq.handle = boHandle
-	err := ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeMapDumb),
-		uintptr(unsafe.Pointer(mreq)))
-	if err != nil {
+func MapDumb(f *os.File, handle uint32) (uint64, error) {
+	mreq := mode.SysMapDumb{Handle: handle}
+
+	if err := mode.MapDumb(f, &mreq); err != nil {
 		return 0, err
 	}
-	return mreq.offset, nil
+
+	return mreq.Offset, nil
 }
 
-func DestroyDumb(file *os.File, handle uint32) error {
-	return ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeDestroyDumb),
-		uintptr(unsafe.Pointer(&sysDestroyDumb{handle})))
+func DestroyDumb(f *os.File, handle uint32) error {
+	return mode.DestroyDumb(f, &mode.SysDestroyDumb{Handle: handle})
 }
 
-func GetCrtc(file *os.File, id uint32) (*Crtc, error) {
-	crtc := &sysCrtc{}
-	crtc.id = id
-	err := ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeGetCrtc),
-		uintptr(unsafe.Pointer(crtc)))
-	if err != nil {
+func GetCrtc(f *os.File, id uint32) (*Crtc, error) {
+	crtc := mode.SysCrtc{ID: id}
+
+	if err := mode.GetCrtc(f, &crtc); err != nil {
 		return nil, err
 	}
+
 	ret := &Crtc{
-		ID:        crtc.id,
-		X:         crtc.x,
-		Y:         crtc.y,
-		ModeValid: int(crtc.modeValid),
-		BufferID:  crtc.fbID,
-		GammaSize: int(crtc.gammaSize),
+		ID:        crtc.ID,
+		X:         crtc.X,
+		Y:         crtc.Y,
+		ModeValid: int(crtc.ModeValid),
+		BufferID:  crtc.FBID,
+		GammaSize: int(crtc.GammaSize),
 	}
 
-	ret.Mode = crtc.mode
-	ret.Width = uint32(crtc.mode.Hdisplay)
-	ret.Height = uint32(crtc.mode.Vdisplay)
+	ret.Mode = crtc.Mode
+	ret.Width = uint32(crtc.Mode.Hdisplay)
+	ret.Height = uint32(crtc.Mode.Vdisplay)
 	return ret, nil
 }
 
-func SetCrtc(file *os.File, crtcid, bufferid, x, y uint32, connectors *uint32, count int, mode *Info) error {
-	crtc := &sysCrtc{}
-	crtc.x = x
-	crtc.y = y
-	crtc.id = crtcid
-	crtc.fbID = bufferid
+func SetCrtc(f *os.File, crtcid, bufferid, x, y uint32, connectors *uint32, count int, modeInfo *Info) error {
+	crtc := mode.SysCrtc{
+		X:               x,
+		Y:               y,
+		ID:              crtcid,
+		FBID:            bufferid,
+		CountConnectors: uint32(count),
+	}
+
 	if connectors != nil {
-		crtc.setConnectorsPtr = uint64(uintptr(unsafe.Pointer(connectors)))
+		crtc.SetConnectorsPtr = uint64(uintptr(unsafe.Pointer(connectors)))
 	}
-	crtc.countConnectors = uint32(count)
-	if mode != nil {
-		crtc.mode = *mode
-		crtc.modeValid = 1
+
+	if modeInfo != nil {
+		crtc.Mode = *modeInfo
+		crtc.ModeValid = 1
 	}
-	return ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLModeSetCrtc),
-		uintptr(unsafe.Pointer(crtc)))
+
+	return mode.SetCrtc(f, &crtc)
 }

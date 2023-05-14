@@ -9,7 +9,7 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/JesterSks/drm/ioctl"
+	"github.com/JesterSks/drm/internal/ioctl"
 )
 
 type (
