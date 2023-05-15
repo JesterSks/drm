@@ -98,7 +98,7 @@ func GetConnector(f *os.File, id uint32) (*Connector, error) {
 		return nil, err
 	}
 
-	ret := &Connector{
+	return &Connector{
 		SysGetConnector: conn,
 		ID:              conn.ID,
 		EncoderID:       conn.EncoderID,
@@ -110,18 +110,12 @@ func GetConnector(f *os.File, id uint32) (*Connector, error) {
 		Subpixel: uint8(conn.Subpixel + 1),
 		Type:     conn.ConnectorType,
 		TypeID:   conn.ConnectorTypeID,
-	}
 
-	ret.Props = make([]uint32, len(props))
-	copy(ret.Props, props)
-	ret.PropValues = make([]uint64, len(propValues))
-	copy(ret.PropValues, propValues)
-	ret.Modes = make([]Info, len(modes))
-	copy(ret.Modes, modes)
-	ret.Encoders = make([]uint32, len(encoders))
-	copy(ret.Encoders, encoders)
-
-	return ret, nil
+		Props:      props,
+		PropValues: propValues,
+		Modes:      modes,
+		Encoders:   encoders,
+	}, nil
 }
 
 func GetEncoder(f *os.File, id uint32) (*Encoder, error) {
