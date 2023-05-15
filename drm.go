@@ -1,7 +1,6 @@
 package drm
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"os"
@@ -73,34 +72,21 @@ func GetVersion(f *os.File) (Version, error) {
 	}
 
 	if version.NameLen > 0 {
-		name = make([]byte, version.NameLen+1)
+		name = make([]byte, version.NameLen)
 		version.Name = uintptr(unsafe.Pointer(&name[0]))
 	}
 
 	if version.DateLen > 0 {
-		date = make([]byte, version.DateLen+1)
+		date = make([]byte, version.DateLen)
 		version.Date = uintptr(unsafe.Pointer(&date[0]))
 	}
 	if version.DescLen > 0 {
-		desc = make([]byte, version.DescLen+1)
+		desc = make([]byte, version.DescLen)
 		version.Desc = uintptr(unsafe.Pointer(&desc[0]))
 	}
 
 	if err := internal.GetVersion(f, &version); err != nil {
 		return Version{}, err
-	}
-
-	// remove C null byte at end
-	name = name[:version.NameLen]
-	date = date[:version.DateLen]
-	desc = desc[:version.DescLen]
-
-	nozero := func(r rune) bool {
-		if r == 0 {
-			return true
-		} else {
-			return false
-		}
 	}
 
 	v := Version{
@@ -109,9 +95,9 @@ func GetVersion(f *os.File) (Version, error) {
 		Minor:      version.Minor,
 		Patch:      version.Patch,
 
-		Name: string(bytes.TrimFunc(name, nozero)),
-		Date: string(bytes.TrimFunc(date, nozero)),
-		Desc: string(bytes.TrimFunc(desc, nozero)),
+		Name: string(name),
+		Date: string(date),
+		Desc: string(desc),
 	}
 
 	return v, nil
