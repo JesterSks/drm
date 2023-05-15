@@ -28,8 +28,8 @@ var (
 	ioctlModeCreateDumb = ioctl.DRMiowr[SysCreateDumb](0xB2)
 
 	// DRM_IOWR(0xB3, struct drm_mode_map_dumb)
-	ioctlModeMapDumb = ioctl.DRMiowr[MapDumb](0xB3)
+	ioctlModeMapDumb = ioctl.DRMiowr[SysMapDumb](0xB3)
 
 	// DRM_IOWR(0xB4, struct drm_mode_destroy_dumb)
-	ioctlModeDestroyDumb = ioctl.DRMiowr[DestroyDumb](0xB4)
+	ioctlModeDestroyDumb = ioctl.DRMiowr[SysDestroyDumb](0xB4)
 )
