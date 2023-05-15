@@ -1,5 +1,7 @@
 package mode
 
+const DisplayModeLen = 32
+
 type SysResources struct {
 	FBIDPtr         uint64
 	CrtcIDPtr       uint64
@@ -85,6 +87,28 @@ type SysRmFB struct {
 	Handle uint32
 }
 
+type SysInfo struct {
+	Clock uint32
+
+	Hdisplay   uint16
+	HsyncStart uint16
+	HsyncEnd   uint16
+	Htotal     uint16
+	Hskew      uint16
+
+	Vdisplay   uint16
+	VsyncStart uint16
+	VsyncEnd   uint16
+	Vtotal     uint16
+	Vscan      uint16
+
+	Vrefresh uint32
+
+	Flags uint32
+	Type  uint32
+	Name  [DisplayModeLen]uint8
+}
+
 type SysCrtc struct {
 	SetConnectorsPtr uint64
 	CountConnectors  uint32
@@ -98,7 +122,7 @@ type SysCrtc struct {
 
 	GammaSize uint32
 	ModeValid uint32
-	Mode      Info
+	Mode      SysInfo
 }
 
 type SysDestroyDumb struct {

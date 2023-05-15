@@ -3,38 +3,26 @@ package drm
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"log"
 	"os"
 	"strconv"
 	"strings"
 	"unsafe"
 
-	"github.com/JesterSks/drm/internal/ioctl"
+	"github.com/JesterSks/drm/internal"
 )
 
-type (
-	version struct {
-		Major   int32
-		Minor   int32
-		Patch   int32
-		namelen int64
-		name    uintptr
-		datelen int64
-		date    uintptr
-		desclen int64
-		desc    uintptr
-	}
+// Version of DRM driver
+type Version struct {
+	internal.SysVersion
 
-	// Version of DRM driver
-	Version struct {
-		version
-
-		Major, Minor, Patch int32
-		Name                string // Name of the driver (eg.: i915)
-		Date                string
-		Desc                string
-	}
-)
+	Major int32
+	Minor int32
+	Patch int32
+	Name  string // Name of the driver (eg.: i915)
+	Date  string
+	Desc  string
+}
 
 const (
 	driPath = "/dev/dri"
@@ -47,7 +35,13 @@ func Available() (Version, error) {
 		// check /proc/dri/0 ?
 		return Version{}, err
 	}
-	defer f.Close()
+
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.Println(err)
+		}
+	}()
+
 	return GetVersion(f)
 }
 
@@ -67,42 +61,39 @@ func open(path string) (*os.File, error) {
 	return os.OpenFile(path, os.O_RDWR, 0)
 }
 
-func GetVersion(file *os.File) (Version, error) {
+func GetVersion(f *os.File) (Version, error) {
 	var (
 		name, date, desc []byte
 	)
 
-	version := &version{}
-	err := ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLVersion),
-		uintptr(unsafe.Pointer(version)))
-	if err != nil {
+	version := internal.SysVersion{}
+
+	if err := internal.GetVersion(f, &version); err != nil {
 		return Version{}, err
 	}
 
-	if version.namelen > 0 {
-		name = make([]byte, version.namelen+1)
-		version.name = uintptr(unsafe.Pointer(&name[0]))
+	if version.NameLen > 0 {
+		name = make([]byte, version.NameLen+1)
+		version.Name = uintptr(unsafe.Pointer(&name[0]))
 	}
 
-	if version.datelen > 0 {
-		date = make([]byte, version.datelen+1)
-		version.date = uintptr(unsafe.Pointer(&date[0]))
+	if version.DateLen > 0 {
+		date = make([]byte, version.DateLen+1)
+		version.Date = uintptr(unsafe.Pointer(&date[0]))
 	}
-	if version.desclen > 0 {
-		desc = make([]byte, version.desclen+1)
-		version.desc = uintptr(unsafe.Pointer(&desc[0]))
+	if version.DescLen > 0 {
+		desc = make([]byte, version.DescLen+1)
+		version.Desc = uintptr(unsafe.Pointer(&desc[0]))
 	}
 
-	err = ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLVersion),
-		uintptr(unsafe.Pointer(version)))
-	if err != nil {
+	if err := internal.GetVersion(f, &version); err != nil {
 		return Version{}, err
 	}
 
 	// remove C null byte at end
-	name = name[:version.namelen]
-	date = date[:version.datelen]
-	desc = desc[:version.desclen]
+	name = name[:version.NameLen]
+	date = date[:version.DateLen]
+	desc = desc[:version.DescLen]
 
 	nozero := func(r rune) bool {
 		if r == 0 {
@@ -113,10 +104,10 @@ func GetVersion(file *os.File) (Version, error) {
 	}
 
 	v := Version{
-		version: *version,
-		Major:   version.Major,
-		Minor:   version.Minor,
-		Patch:   version.Patch,
+		SysVersion: version,
+		Major:      version.Major,
+		Minor:      version.Minor,
+		Patch:      version.Patch,
 
 		Name: string(bytes.TrimFunc(name, nozero)),
 		Date: string(bytes.TrimFunc(date, nozero)),
@@ -128,7 +119,7 @@ func GetVersion(file *os.File) (Version, error) {
 
 func ListDevices() []Version {
 	var devices []Version
-	files, err := ioutil.ReadDir(driPath)
+	files, err := os.ReadDir(driPath)
 	if err != nil {
 		return devices
 	}

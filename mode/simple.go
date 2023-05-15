@@ -8,20 +8,19 @@ import (
 	"os"
 )
 
-type (
-	Modeset struct {
-		Width, Height uint16
+type Modeset struct {
+	Width  uint16
+	Height uint16
 
-		Mode Info
-		Conn uint32
-		Crtc uint32
-	}
+	Mode Info
+	Conn uint32
+	Crtc uint32
+}
 
-	SimpleModeset struct {
-		Modesets []Modeset
-		driFile  *os.File
-	}
-)
+type SimpleModeset struct {
+	Modesets []Modeset
+	driFile  *os.File
+}
 
 func (mset *SimpleModeset) prepare() error {
 	res, err := GetResources(mset.driFile)

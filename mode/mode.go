@@ -18,77 +18,6 @@ const (
 	UnknownConnection = 3
 )
 
-type (
-	Info struct {
-		Clock                                         uint32
-		Hdisplay, HsyncStart, HsyncEnd, Htotal, Hskew uint16
-		Vdisplay, VsyncStart, VsyncEnd, Vtotal, Vscan uint16
-
-		Vrefresh uint32
-
-		Flags uint32
-		Type  uint32
-		Name  [DisplayModeLen]uint8
-	}
-
-	Resources struct {
-		mode.SysResources
-
-		Fbs        []uint32
-		Crtcs      []uint32
-		Connectors []uint32
-		Encoders   []uint32
-	}
-
-	Connector struct {
-		mode.SysGetConnector
-
-		ID            uint32
-		EncoderID     uint32
-		Type          uint32
-		TypeID        uint32
-		Connection    uint8
-		Width, Height uint32
-		Subpixel      uint8
-
-		Modes []Info
-
-		Props      []uint32
-		PropValues []uint64
-
-		Encoders []uint32
-	}
-
-	Encoder struct {
-		ID   uint32
-		Type uint32
-
-		CrtcID uint32
-
-		PossibleCrtcs  uint32
-		PossibleClones uint32
-	}
-
-	Crtc struct {
-		ID       uint32
-		BufferID uint32 // FB id to connect to 0 = disconnect
-
-		X, Y          uint32 // Position on the framebuffer
-		Width, Height uint32
-		ModeValid     int
-		Mode          Info
-
-		GammaSize int // Number of gamma stops
-	}
-
-	FB struct {
-		Height, Width, BPP, Flags uint32
-		Handle                    uint32
-		Pitch                     uint32
-		Size                      uint64
-	}
-)
-
 func GetResources(f *os.File) (*Resources, error) {
 	mres := mode.SysResources{}
 
@@ -275,7 +204,7 @@ func GetCrtc(f *os.File, id uint32) (*Crtc, error) {
 		return nil, err
 	}
 
-	ret := &Crtc{
+	ret := Crtc{
 		ID:        crtc.ID,
 		X:         crtc.X,
 		Y:         crtc.Y,
@@ -284,10 +213,10 @@ func GetCrtc(f *os.File, id uint32) (*Crtc, error) {
 		GammaSize: int(crtc.GammaSize),
 	}
 
-	ret.Mode = crtc.Mode
+	ret.Mode = convertSysInfoToInfo(crtc.Mode)
 	ret.Width = uint32(crtc.Mode.Hdisplay)
 	ret.Height = uint32(crtc.Mode.Vdisplay)
-	return ret, nil
+	return &ret, nil
 }
 
 func SetCrtc(f *os.File, crtcid, bufferid, x, y uint32, connectors *uint32, count int, modeInfo *Info) error {
@@ -304,7 +233,7 @@ func SetCrtc(f *os.File, crtcid, bufferid, x, y uint32, connectors *uint32, coun
 	}
 
 	if modeInfo != nil {
-		crtc.Mode = *modeInfo
+		crtc.Mode = convertInfoToSysInfo(*modeInfo)
 		crtc.ModeValid = 1
 	}
 

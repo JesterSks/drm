@@ -2,16 +2,8 @@ package drm
 
 import (
 	"os"
-	"unsafe"
 
-	"github.com/JesterSks/drm/internal/ioctl"
-)
-
-type (
-	capability struct {
-		id  uint64
-		val uint64
-	}
+	"github.com/JesterSks/drm/internal"
 )
 
 const (
@@ -28,20 +20,20 @@ const (
 	CapAddFB2Modifiers = 0x10
 )
 
-func HasDumbBuffer(file *os.File) bool {
-	cap, err := GetCap(file, CapDumbBuffer)
+func HasDumbBuffer(f *os.File) bool {
+	cap, err := GetCap(f, CapDumbBuffer)
 	if err != nil {
 		return false
 	}
 	return cap != 0
 }
 
-func GetCap(file *os.File, capid uint64) (uint64, error) {
-	cap := &capability{}
-	cap.id = capid
-	err := ioctl.IOCtl(uintptr(file.Fd()), uintptr(IOCTLGetCap), uintptr(unsafe.Pointer(cap)))
-	if err != nil {
+func GetCap(f *os.File, id uint64) (uint64, error) {
+	c := internal.SysCapability{ID: id}
+
+	if err := internal.GetCapability(f, &c); err != nil {
 		return 0, err
 	}
-	return cap.val, nil
+
+	return c.Val, nil
 }
