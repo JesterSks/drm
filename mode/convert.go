@@ -2,8 +2,8 @@ package mode
 
 import "github.com/JesterSks/drm/internal/mode"
 
-func convertSysInfoToInfo(i mode.SysInfo) Info {
-	return Info{
+func convertSysInfoToInfo(i mode.SysModeInfo) ModeInfo {
+	return ModeInfo{
 		Clock: i.Clock,
 
 		Hdisplay:   i.Hdisplay,
@@ -25,8 +25,8 @@ func convertSysInfoToInfo(i mode.SysInfo) Info {
 	}
 }
 
-func convertInfoToSysInfo(i Info) mode.SysInfo {
-	return mode.SysInfo{
+func convertInfoToSysInfo(i ModeInfo) mode.SysModeInfo {
+	return mode.SysModeInfo{
 		Clock: i.Clock,
 
 		Hdisplay:   i.Hdisplay,

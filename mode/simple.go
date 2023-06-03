@@ -1,5 +1,6 @@
 // Port of modeset.c example to Go
 // Source: https://github.com/dvdhrm/docs/blob/master/drm-howto/modeset.c
+
 package mode
 
 import (
@@ -12,7 +13,7 @@ type Modeset struct {
 	Width  uint16
 	Height uint16
 
-	Mode Info
+	Mode ModeInfo
 	Conn uint32
 	Crtc uint32
 }
@@ -107,7 +108,7 @@ func (mset *SimpleModeset) findCrtc(res *Resources, conn *Connector, dev *Modese
 
 	// If the connector is not currently bound to an encoder or if the
 	// encoder+crtc is already used by another connector (actually unlikely
-	// but lets be safe), iterate all other available encoders to find a
+	// but let us be safe), iterate all other available encoders to find a
 	// matching CRTC.
 	for i := 0; i < len(conn.Encoders); i++ {
 		encoder, err := GetEncoder(mset.driFile, conn.Encoders[i])
@@ -117,7 +118,7 @@ func (mset *SimpleModeset) findCrtc(res *Resources, conn *Connector, dev *Modese
 		// iterate all global CRTCs
 		for j := 0; j < len(res.Crtcs); j++ {
 			// check whether this CRTC works with the encoder
-			if (encoder.PossibleCrtcs & (1 << uint(j))) != 0 {
+			if (encoder.PossibleCrtcs & (1 << uint(j))) == 0 {
 				continue
 			}
 

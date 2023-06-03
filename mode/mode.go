@@ -71,7 +71,7 @@ func GetConnector(f *os.File, id uint32) (*Connector, error) {
 	var (
 		props, encoders []uint32
 		propValues      []uint64
-		modes           []Info
+		modes           []ModeInfo
 	)
 
 	if conn.CountProps > 0 {
@@ -86,7 +86,7 @@ func GetConnector(f *os.File, id uint32) (*Connector, error) {
 		conn.CountModes = 1
 	}
 
-	modes = make([]Info, conn.CountModes)
+	modes = make([]ModeInfo, conn.CountModes)
 	conn.ModesPtr = uint64(uintptr(unsafe.Pointer(&modes[0])))
 
 	if conn.CountEncoders > 0 {
@@ -213,7 +213,7 @@ func GetCrtc(f *os.File, id uint32) (*Crtc, error) {
 	return &ret, nil
 }
 
-func SetCrtc(f *os.File, crtcid, bufferid, x, y uint32, connectors *uint32, count int, modeInfo *Info) error {
+func SetCrtc(f *os.File, crtcid, bufferid, x, y uint32, connectors *uint32, count int, modeInfo *ModeInfo) error {
 	crtc := mode.SysCrtc{
 		X:               x,
 		Y:               y,

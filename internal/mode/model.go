@@ -87,7 +87,7 @@ type SysRmFB struct {
 	Handle uint32
 }
 
-type SysInfo struct {
+type SysModeInfo struct {
 	Clock uint32
 
 	Hdisplay   uint16
@@ -122,7 +122,7 @@ type SysCrtc struct {
 
 	GammaSize uint32
 	ModeValid uint32
-	Mode      SysInfo
+	Mode      SysModeInfo
 }
 
 type SysDestroyDumb struct {

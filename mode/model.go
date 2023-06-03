@@ -2,7 +2,7 @@ package mode
 
 import "github.com/JesterSks/drm/internal/mode"
 
-type Info struct {
+type ModeInfo struct {
 	Clock uint32
 
 	Hdisplay   uint16
@@ -44,7 +44,7 @@ type Connector struct {
 	Width, Height uint32
 	Subpixel      uint8
 
-	Modes []Info
+	Modes []ModeInfo
 
 	Props      []uint32
 	PropValues []uint64
@@ -73,7 +73,7 @@ type Crtc struct {
 	Width     uint32
 	Height    uint32
 	ModeValid int
-	Mode      Info
+	Mode      ModeInfo
 
 	GammaSize int // Number of gamma stops
 }
